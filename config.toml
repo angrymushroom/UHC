@@ -1,0 +1,8 @@
+[source]
+listing_url = "https://transparency-in-coverage.uhc.com/api/v1/uhc/blobs/"
+
+# Limit the download size of each individual file, in bytes.
+[limits]
+listing_bytes = 100000000
+index_bytes = 20971520
+sample_blob_bytes = 10485760

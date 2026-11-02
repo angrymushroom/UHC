@@ -1,0 +1,8 @@
+name: uhc-pricing-explorer
+channels:
+  - snowflake
+dependencies:
+  - streamlit=1.50.0
+  - pandas=2.*
+  - altair=5.*
+  - snowflake-snowpark-python
