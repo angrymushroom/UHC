@@ -8,16 +8,31 @@ Both in-network (IN) and out-of-network (OON) files are ingested and modeled. Th
 
 ## Results
 
-The exported Streamlit result contains **21 service groups representing 850 source price records**. Two examples illustrate the difference between typical price and price dispersion:
+The final Streamlit export contains **21 service groups representing 850 source price records** from the selected OHBS file.
+
+![Streamlit chart showing P25–P75 negotiated-price intervals and medians for 21 OHBS service groups](assets/service-price-dispersion.png)
+
+*Actual Streamlit chart exported on November 2, 2026. Blue intervals show the middle 50% of source prices (P25–P75); orange points show medians. Rows are ordered by median price, not by interval width. Longer intervals indicate greater absolute dispersion. Truncated labels retain source context in the application's hover details.*
+
+### Main findings
 
 | CPT code | Source service description | Records | P25 | Median | P75 | P75 − P25 |
 |---|---|---:|---:|---:|---:|---:|
 | 90791 | Psychiatric diagnostic evaluation | 29 | 131.75 | 187.45 | 235.06 | 103.31 |
+| 90792 | Psychiatric diagnostic evaluation with medical services | 35 | 130.545 | 166.00 | 210.855 | 80.31 |
 | 99205 | Office/outpatient new patient, high medical decision making | 21 | 207.85 | 225.17 | 270.03 | 62.18 |
 
-90791 has the widest middle-half price interval among the 21 displayed groups. Although 99205 has a higher median, its interval is narrower. Prioritizing services by typical price and prioritizing them by absolute dispersion can therefore lead to different review priorities.
+1. **90791 has the widest middle-half interval among the 21 displayed groups.** Its 29 source prices have a median of 187.45, with P25–P75 spanning 103.31. Substantial dispersion remains within this service after applying the selected billing conditions.
+2. **The highest median does not identify the widest interval.** 99205 has the highest median in the displayed sample, 225.17, but its interval width is 62.18. A review based only on high typical prices would prioritize differently from one focused on within-service dispersion.
+3. **The spread is also visible in another diagnostic service.** 90792 has the second-widest interval, 80.31 across 35 records. Together, these two diagnostic service groups provide concrete starting points for investigating the reasons behind quote differences.
 
-The chart shows P25–P75 as a blue interval and the median as an orange point, ordered by median price. Each source price record has equal weight. Records are not visits, patients or unique providers. Differences in geography, provider associations and complete contract terms remain outside this analysis. Service price scales and billing units also differ, so interval width is an initial investigation aid, not a savings estimate.
+### Business interpretation
+
+For a review focused on absolute price dispersion, start with 90791 and 90792, then examine the underlying source records and their geography, provider associations and contract terms. The output narrows an otherwise large set of published prices into a small, explainable investigation queue. It does not establish why the differences exist.
+
+Each price record has equal weight; counts are not visits, patients or unique providers. The sample is not market-representative, and the filters do not control every contractual or geographic difference. Services have different price scales and billing units. Without utilization, quality and complete contract information, interval widths cannot be treated as achievable savings or evidence that a provider's price is unreasonable.
+
+**Project outcome:** nested IN/OON files are modeled into traceable price records, and one reproducible SQL aggregation turns selected IN prices into an interpretable distribution chart. The delivered finding is an investigation priority, with its scope and limitations explicit.
 
 ## Pipeline
 
@@ -164,4 +179,4 @@ Optional acquisition tests:
 
 Tests cover selection, deduplication, caching, incomplete downloads, gzip truncation and failure recording using mocked inputs. They are not a Snowflake integration suite. They were not rerun during the final documentation cleanup.
 
-The results above are from the supplied November 2, 2026 Streamlit CSV export. They establish the displayed aggregate values, not comprehensive validation of every pipeline step or user interaction. Documentation cleanup did not rerun cloud SQL or publish the application.
+The results above use the November 2, 2026 Streamlit CSV export; the chart is the corresponding supplied PNG export. They establish the displayed aggregate values, not comprehensive validation of every pipeline step or user interaction. Documentation cleanup did not rerun cloud SQL or publish the application.

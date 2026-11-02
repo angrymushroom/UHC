@@ -11,6 +11,10 @@
 !/dashboard/
 !/tests/
 !/sample_data/
+!/assets/
+
+/assets/*
+!/assets/service-price-dispersion.png
 
 /src/*
 !/src/*.py
