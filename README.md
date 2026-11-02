@@ -36,18 +36,55 @@ Each price record has equal weight; counts are not visits, patients or unique pr
 
 ## Pipeline
 
-```text
-Official listing → 1,000 Index files → selected 3 IN + 5 OON files
-                             ↓
-                 Python raw JSONL preparation
-                             ↓
-               Snowflake raw VARIANT tables
-                             ↓
-                  IN and OON price tables
-                             ↓
-             One IN service-dispersion result table
-                             ↓
-                  Streamlit in Snowflake
+Read from top to bottom: Python prepares files, SQL 01 loads raw records, SQL 02 builds price tables, and SQL 03 produces the chart's result table. Solid arrows show the processing flow; dotted arrows identify shared function calls. Existing selections and valid downloads are reused on reruns.
+
+```mermaid
+flowchart TD
+    A["Official UHC listing"] --> B["ingest.py · run()"]
+    B --> C["select_indexes()<br/>First 1,000 distinct Index URLs<br/>in listing order"]
+    C --> D["fetch_files()<br/>Download 1,000 Index files"]
+
+    D --> E["io_utils.file_references()<br/>Collect full IN/OON URLs<br/>referenced by the Indexes"]
+    A --> F["Listing metadata<br/>Filename, full URL and declared size"]
+    E --> G["select_pricing()<br/>Match full reference URLs to the listing<br/>Declared size: greater than 0, at most 10 MiB"]
+    F --> G
+
+    G --> ISEL["Select 3 IN files<br/>Smallest eligible file for each label:<br/>OHBS, OHPH-ST,<br/>Acupuncture-Massage-Naturopath"]
+    G --> OSEL["Select 5 OON files<br/>Four largest eligible files<br/>plus the smallest remaining file"]
+    ISEL --> H["fetch_files()<br/>Download selected pricing files"]
+    OSEL --> H
+
+    D -. calls .-> U["io_utils.download()<br/>Write 64 KiB chunks to .part<br/>Validate complete JSON/GZ, then publish"]
+    H -. calls .-> U
+
+    D --> T["transform.py · prepare()<br/>Package original Index documents<br/>and download-ledger snapshots"]
+    H -->|Pricing download ledger| T
+    H --> P["pricing.py · prepare()<br/>read_section() and ijson.items()<br/>Read one IN/OON service at a time"]
+
+    T --> F1["indexes.jsonl.gz<br/>1,000 original Index documents"]
+    T --> F2["downloads.jsonl.gz<br/>Snapshots for 1,000 Index<br/>and 8 pricing downloads"]
+    P --> F3["pricing.jsonl.gz<br/>Service objects plus one header per file"]
+
+    F1 --> S["Manually upload to UHC_STAGE root"]
+    F2 --> S
+    F3 --> S
+
+    S --> SQL1["01_load_raw.sql · COPY INTO"]
+    SQL1 --> R1["RAW_INDEX_INPUT"]
+    SQL1 --> R2["RAW_DOWNLOAD_INPUT"]
+    SQL1 --> R3["RAW_PRICING_INPUT"]
+
+    R2 --> V["02_build_rates.sql<br/>V_RAW_PRICING<br/>Unwrap JSON and attach source metadata"]
+    R3 --> V
+    V --> I["IN_NETWORK_RATES_SQL<br/>One row per source price object"]
+    V --> O["OUT_OF_NETWORK_RATES_SQL<br/>One row per allowed/billed amount pair"]
+
+    I --> SQL3["03_analysis.sql<br/>Align conditions, group source services<br/>and calculate price quantiles"]
+    SQL3 --> RESULT["IN_SERVICE_DISPERSION_SQL"]
+    RESULT --> APP["Streamlit<br/>One P25–P75 interval and median chart"]
+
+    R1 --> RAW["Retain original Index content<br/>and source provenance"]
+    O --> STORED["OON parsed and stored<br/>Outside the final chart"]
 ```
 
 | File | Responsibility |
